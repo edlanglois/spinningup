@@ -152,7 +152,7 @@ def vpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.save_config(locals())
 
     seed += 10000 * proc_id()
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
     np.random.seed(seed)
 
     env = env_fn()
@@ -184,19 +184,19 @@ def vpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.log('\nNumber of parameters: \t pi: %d, \t v: %d\n'%var_counts)
 
     # VPG objectives
-    pi_loss = -tf.reduce_mean(logp * adv_ph)
-    v_loss = tf.reduce_mean((ret_ph - v)**2)
+    pi_loss = -tf.reduce_mean(input_tensor=logp * adv_ph)
+    v_loss = tf.reduce_mean(input_tensor=(ret_ph - v)**2)
 
     # Info (useful to watch during learning)
-    approx_kl = tf.reduce_mean(logp_old_ph - logp)      # a sample estimate for KL-divergence, easy to compute
-    approx_ent = tf.reduce_mean(-logp)                  # a sample estimate for entropy, also easy to compute
+    approx_kl = tf.reduce_mean(input_tensor=logp_old_ph - logp)      # a sample estimate for KL-divergence, easy to compute
+    approx_ent = tf.reduce_mean(input_tensor=-logp)                  # a sample estimate for entropy, also easy to compute
 
     # Optimizers
     train_pi = MpiAdamOptimizer(learning_rate=pi_lr).minimize(pi_loss)
     train_v = MpiAdamOptimizer(learning_rate=vf_lr).minimize(v_loss)
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.Session()
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     # Sync params across processes
     sess.run(sync_all_params())

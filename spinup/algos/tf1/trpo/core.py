@@ -17,7 +17,7 @@ def values_as_sorted_list(dict):
     return [dict[k] for k in keys_as_sorted_list(dict)]
 
 def placeholder(dim=None):
-    return tf.placeholder(dtype=tf.float32, shape=combined_shape(None,dim))
+    return tf.compat.v1.placeholder(dtype=tf.float32, shape=combined_shape(None,dim))
 
 def placeholders(*args):
     return [placeholder(dim) for dim in args]
@@ -26,7 +26,7 @@ def placeholder_from_space(space):
     if isinstance(space, Box):
         return placeholder(space.shape)
     elif isinstance(space, Discrete):
-        return tf.placeholder(dtype=tf.int32, shape=(None,))
+        return tf.compat.v1.placeholder(dtype=tf.int32, shape=(None,))
     raise NotImplementedError
 
 def placeholders_from_spaces(*args):
@@ -34,11 +34,11 @@ def placeholders_from_spaces(*args):
 
 def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
     for h in hidden_sizes[:-1]:
-        x = tf.layers.dense(x, units=h, activation=activation)
-    return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
+        x = tf.compat.v1.layers.dense(x, units=h, activation=activation)
+    return tf.compat.v1.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
 
 def get_vars(scope=''):
-    return [x for x in tf.trainable_variables() if scope in x.name]
+    return [x for x in tf.compat.v1.trainable_variables() if scope in x.name]
 
 def count_vars(scope=''):
     v = get_vars(scope)
@@ -46,7 +46,7 @@ def count_vars(scope=''):
 
 def gaussian_likelihood(x, mu, log_std):
     pre_sum = -0.5 * (((x-mu)/(tf.exp(log_std)+EPS))**2 + 2*log_std + np.log(2*np.pi))
-    return tf.reduce_sum(pre_sum, axis=1)
+    return tf.reduce_sum(input_tensor=pre_sum, axis=1)
 
 def diagonal_gaussian_kl(mu0, log_std0, mu1, log_std1):
     """
@@ -56,16 +56,16 @@ def diagonal_gaussian_kl(mu0, log_std0, mu1, log_std1):
     """
     var0, var1 = tf.exp(2 * log_std0), tf.exp(2 * log_std1)
     pre_sum = 0.5*(((mu1- mu0)**2 + var0)/(var1 + EPS) - 1) +  log_std1 - log_std0
-    all_kls = tf.reduce_sum(pre_sum, axis=1)
-    return tf.reduce_mean(all_kls)
+    all_kls = tf.reduce_sum(input_tensor=pre_sum, axis=1)
+    return tf.reduce_mean(input_tensor=all_kls)
 
 def categorical_kl(logp0, logp1):
     """
     tf symbol for mean KL divergence between two batches of categorical probability distributions,
     where the distributions are input as log probs.
     """
-    all_kls = tf.reduce_sum(tf.exp(logp1) * (logp1 - logp0), axis=1)
-    return tf.reduce_mean(all_kls)
+    all_kls = tf.reduce_sum(input_tensor=tf.exp(logp1) * (logp1 - logp0), axis=1)
+    return tf.reduce_mean(input_tensor=all_kls)
 
 def flat_concat(xs):
     return tf.concat([tf.reshape(x,(-1,)) for x in xs], axis=0)
@@ -76,14 +76,14 @@ def flat_grad(f, params):
 def hessian_vector_product(f, params):
     # for H = grad**2 f, compute Hx
     g = flat_grad(f, params)
-    x = tf.placeholder(tf.float32, shape=g.shape)
-    return x, flat_grad(tf.reduce_sum(g*x), params)
+    x = tf.compat.v1.placeholder(tf.float32, shape=g.shape)
+    return x, flat_grad(tf.reduce_sum(input_tensor=g*x), params)
 
 def assign_params_from_flat(x, params):
     flat_size = lambda p : int(np.prod(p.shape.as_list())) # the 'int' is important for scalars
     splits = tf.split(x, [flat_size(p) for p in params])
     new_params = [tf.reshape(p_new, p.shape) for p, p_new in zip(params, splits)]
-    return tf.group([tf.assign(p, p_new) for p, p_new in zip(params, new_params)])
+    return tf.group([tf.compat.v1.assign(p, p_new) for p, p_new in zip(params, new_params)])
 
 def discount_cumsum(x, discount):
     """
@@ -110,9 +110,9 @@ def mlp_categorical_policy(x, a, hidden_sizes, activation, output_activation, ac
     act_dim = action_space.n
     logits = mlp(x, list(hidden_sizes)+[act_dim], activation, None)
     logp_all = tf.nn.log_softmax(logits)
-    pi = tf.squeeze(tf.multinomial(logits,1), axis=1)
-    logp = tf.reduce_sum(tf.one_hot(a, depth=act_dim) * logp_all, axis=1)
-    logp_pi = tf.reduce_sum(tf.one_hot(pi, depth=act_dim) * logp_all, axis=1)
+    pi = tf.squeeze(tf.random.categorical(logits=logits,num_samples=1), axis=1)
+    logp = tf.reduce_sum(input_tensor=tf.one_hot(a, depth=act_dim) * logp_all, axis=1)
+    logp_pi = tf.reduce_sum(input_tensor=tf.one_hot(pi, depth=act_dim) * logp_all, axis=1)
 
     old_logp_all = placeholder(act_dim)
     d_kl = categorical_kl(logp_all, old_logp_all)
@@ -126,9 +126,9 @@ def mlp_categorical_policy(x, a, hidden_sizes, activation, output_activation, ac
 def mlp_gaussian_policy(x, a, hidden_sizes, activation, output_activation, action_space):
     act_dim = a.shape.as_list()[-1]
     mu = mlp(x, list(hidden_sizes)+[act_dim], activation, output_activation)
-    log_std = tf.get_variable(name='log_std', initializer=-0.5*np.ones(act_dim, dtype=np.float32))
+    log_std = tf.compat.v1.get_variable(name='log_std', initializer=-0.5*np.ones(act_dim, dtype=np.float32))
     std = tf.exp(log_std)
-    pi = mu + tf.random_normal(tf.shape(mu)) * std
+    pi = mu + tf.random.normal(tf.shape(input=mu)) * std
     logp = gaussian_likelihood(a, mu, log_std)
     logp_pi = gaussian_likelihood(pi, mu, log_std)
 
@@ -153,9 +153,9 @@ def mlp_actor_critic(x, a, hidden_sizes=(64,64), activation=tf.tanh,
     elif policy is None and isinstance(action_space, Discrete):
         policy = mlp_categorical_policy
 
-    with tf.variable_scope('pi'):
+    with tf.compat.v1.variable_scope('pi'):
         policy_outs = policy(x, a, hidden_sizes, activation, output_activation, action_space)
         pi, logp, logp_pi, info, info_phs, d_kl = policy_outs
-    with tf.variable_scope('v'):
+    with tf.compat.v1.variable_scope('v'):
         v = tf.squeeze(mlp(x, list(hidden_sizes)+[1], activation, None), axis=1)
     return pi, logp, logp_pi, info, info_phs, d_kl, v

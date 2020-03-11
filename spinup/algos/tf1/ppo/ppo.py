@@ -167,7 +167,7 @@ def ppo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.save_config(locals())
 
     seed += 10000 * proc_id()
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
     np.random.seed(seed)
 
     env = env_fn()
@@ -200,22 +200,22 @@ def ppo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
     # PPO objectives
     ratio = tf.exp(logp - logp_old_ph)          # pi(a|s) / pi_old(a|s)
-    min_adv = tf.where(adv_ph>0, (1+clip_ratio)*adv_ph, (1-clip_ratio)*adv_ph)
-    pi_loss = -tf.reduce_mean(tf.minimum(ratio * adv_ph, min_adv))
-    v_loss = tf.reduce_mean((ret_ph - v)**2)
+    min_adv = tf.compat.v1.where(adv_ph>0, (1+clip_ratio)*adv_ph, (1-clip_ratio)*adv_ph)
+    pi_loss = -tf.reduce_mean(input_tensor=tf.minimum(ratio * adv_ph, min_adv))
+    v_loss = tf.reduce_mean(input_tensor=(ret_ph - v)**2)
 
     # Info (useful to watch during learning)
-    approx_kl = tf.reduce_mean(logp_old_ph - logp)      # a sample estimate for KL-divergence, easy to compute
-    approx_ent = tf.reduce_mean(-logp)                  # a sample estimate for entropy, also easy to compute
+    approx_kl = tf.reduce_mean(input_tensor=logp_old_ph - logp)      # a sample estimate for KL-divergence, easy to compute
+    approx_ent = tf.reduce_mean(input_tensor=-logp)                  # a sample estimate for entropy, also easy to compute
     clipped = tf.logical_or(ratio > (1+clip_ratio), ratio < (1-clip_ratio))
-    clipfrac = tf.reduce_mean(tf.cast(clipped, tf.float32))
+    clipfrac = tf.reduce_mean(input_tensor=tf.cast(clipped, tf.float32))
 
     # Optimizers
     train_pi = MpiAdamOptimizer(learning_rate=pi_lr).minimize(pi_loss)
     train_v = MpiAdamOptimizer(learning_rate=vf_lr).minimize(v_loss)
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.Session()
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     # Sync params across processes
     sess.run(sync_all_params())

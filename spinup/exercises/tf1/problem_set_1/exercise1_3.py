@@ -158,7 +158,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
 
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
     np.random.seed(seed)
 
     env, test_env = env_fn(), env_fn()
@@ -181,7 +181,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     #=========================================================================#
 
     # Main outputs from computation graph
-    with tf.variable_scope('main'):
+    with tf.compat.v1.variable_scope('main'):
         #######################
         #                     #
         #   YOUR CODE HERE    #
@@ -191,7 +191,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         pass
     
     # Target policy network
-    with tf.variable_scope('target'):
+    with tf.compat.v1.variable_scope('target'):
         #######################
         #                     #
         #   YOUR CODE HERE    #
@@ -201,7 +201,7 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
         pass
     
     # Target Q networks
-    with tf.variable_scope('target', reuse=True):
+    with tf.compat.v1.variable_scope('target', reuse=True):
 
         # Target policy smoothing, by adding clipped noise to target actions
         #######################
@@ -250,21 +250,21 @@ def td3(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     #=========================================================================#
 
     # Separate train ops for pi, q
-    pi_optimizer = tf.train.AdamOptimizer(learning_rate=pi_lr)
-    q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
+    pi_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=pi_lr)
+    q_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=q_lr)
     train_pi_op = pi_optimizer.minimize(pi_loss, var_list=get_vars('main/pi'))
     train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main/q'))
 
     # Polyak averaging for target variables
-    target_update = tf.group([tf.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
+    target_update = tf.group([tf.compat.v1.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
                               for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
     # Initializing targets to match main variables
-    target_init = tf.group([tf.assign(v_targ, v_main)
+    target_init = tf.group([tf.compat.v1.assign(v_targ, v_main)
                               for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.Session()
+    sess.run(tf.compat.v1.global_variables_initializer())
     sess.run(target_init)
 
     # Setup model saving

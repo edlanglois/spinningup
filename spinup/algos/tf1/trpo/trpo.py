@@ -200,7 +200,7 @@ def trpo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger.save_config(locals())
 
     seed += 10000 * proc_id()
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
     np.random.seed(seed)
 
     env = env_fn()
@@ -234,8 +234,8 @@ def trpo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
 
     # TRPO losses
     ratio = tf.exp(logp - logp_old_ph)          # pi(a|s) / pi_old(a|s)
-    pi_loss = -tf.reduce_mean(ratio * adv_ph)
-    v_loss = tf.reduce_mean((ret_ph - v)**2)
+    pi_loss = -tf.reduce_mean(input_tensor=ratio * adv_ph)
+    v_loss = tf.reduce_mean(input_tensor=(ret_ph - v)**2)
 
     # Optimizer for value function
     train_vf = MpiAdamOptimizer(learning_rate=vf_lr).minimize(v_loss)
@@ -251,8 +251,8 @@ def trpo(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     get_pi_params = core.flat_concat(pi_params)
     set_pi_params = core.assign_params_from_flat(v_ph, pi_params)
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.Session()
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     # Sync params across processes
     sess.run(sync_all_params())

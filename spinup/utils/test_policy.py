@@ -71,7 +71,7 @@ def load_tf_policy(fpath, itr, deterministic=False):
     print('\n\nLoading from %s.\n\n'%fname)
 
     # load the things!
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
     model = restore_tf_graph(sess, fname)
 
     # get the correct op for executing actions

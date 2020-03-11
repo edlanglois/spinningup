@@ -38,12 +38,12 @@ if __name__ == '__main__':
     from spinup.exercises.tf1.problem_set_1_solutions import exercise1_1_soln
     from spinup.exercises.common import print_result
 
-    sess = tf.Session()
+    sess = tf.compat.v1.Session()
 
     dim = 10
-    x = tf.placeholder(tf.float32, shape=(None, dim))
-    mu = tf.placeholder(tf.float32, shape=(None, dim))
-    log_std = tf.placeholder(tf.float32, shape=(dim,))
+    x = tf.compat.v1.placeholder(tf.float32, shape=(None, dim))
+    mu = tf.compat.v1.placeholder(tf.float32, shape=(None, dim))
+    log_std = tf.compat.v1.placeholder(tf.float32, shape=(dim,))
 
     your_gaussian_likelihood = gaussian_likelihood(x, mu, log_std)
     true_gaussian_likelihood = exercise1_1_soln.gaussian_likelihood(x, mu, log_std)

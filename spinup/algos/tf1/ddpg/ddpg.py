@@ -129,7 +129,7 @@ def ddpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
 
-    tf.set_random_seed(seed)
+    tf.compat.v1.set_random_seed(seed)
     np.random.seed(seed)
 
     env, test_env = env_fn(), env_fn()
@@ -146,11 +146,11 @@ def ddpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     x_ph, a_ph, x2_ph, r_ph, d_ph = core.placeholders(obs_dim, act_dim, obs_dim, None, None)
 
     # Main outputs from computation graph
-    with tf.variable_scope('main'):
+    with tf.compat.v1.variable_scope('main'):
         pi, q, q_pi = actor_critic(x_ph, a_ph, **ac_kwargs)
     
     # Target networks
-    with tf.variable_scope('target'):
+    with tf.compat.v1.variable_scope('target'):
         # Note that the action placeholder going to actor_critic here is 
         # irrelevant, because we only need q_targ(s, pi_targ(s)).
         pi_targ, _, q_pi_targ  = actor_critic(x2_ph, a_ph, **ac_kwargs)
@@ -166,25 +166,25 @@ def ddpg(env_fn, actor_critic=core.mlp_actor_critic, ac_kwargs=dict(), seed=0,
     backup = tf.stop_gradient(r_ph + gamma*(1-d_ph)*q_pi_targ)
 
     # DDPG losses
-    pi_loss = -tf.reduce_mean(q_pi)
-    q_loss = tf.reduce_mean((q-backup)**2)
+    pi_loss = -tf.reduce_mean(input_tensor=q_pi)
+    q_loss = tf.reduce_mean(input_tensor=(q-backup)**2)
 
     # Separate train ops for pi, q
-    pi_optimizer = tf.train.AdamOptimizer(learning_rate=pi_lr)
-    q_optimizer = tf.train.AdamOptimizer(learning_rate=q_lr)
+    pi_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=pi_lr)
+    q_optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=q_lr)
     train_pi_op = pi_optimizer.minimize(pi_loss, var_list=get_vars('main/pi'))
     train_q_op = q_optimizer.minimize(q_loss, var_list=get_vars('main/q'))
 
     # Polyak averaging for target variables
-    target_update = tf.group([tf.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
+    target_update = tf.group([tf.compat.v1.assign(v_targ, polyak*v_targ + (1-polyak)*v_main)
                               for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
     # Initializing targets to match main variables
-    target_init = tf.group([tf.assign(v_targ, v_main)
+    target_init = tf.group([tf.compat.v1.assign(v_targ, v_main)
                               for v_main, v_targ in zip(get_vars('main'), get_vars('target'))])
 
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.Session()
+    sess.run(tf.compat.v1.global_variables_initializer())
     sess.run(target_init)
 
     # Setup model saving

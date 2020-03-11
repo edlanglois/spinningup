@@ -6,8 +6,8 @@ from gym.spaces import Discrete, Box
 def mlp(x, sizes, activation=tf.tanh, output_activation=None):
     # Build a feedforward neural network.
     for size in sizes[:-1]:
-        x = tf.layers.dense(x, units=size, activation=activation)
-    return tf.layers.dense(x, units=sizes[-1], activation=output_activation)
+        x = tf.compat.v1.layers.dense(x, units=size, activation=activation)
+    return tf.compat.v1.layers.dense(x, units=sizes[-1], activation=output_activation)
 
 def train(env_name='CartPole-v0', hidden_sizes=[32], lr=1e-2, 
           epochs=50, batch_size=5000, render=False):
@@ -23,24 +23,24 @@ def train(env_name='CartPole-v0', hidden_sizes=[32], lr=1e-2,
     n_acts = env.action_space.n
 
     # make core of policy network
-    obs_ph = tf.placeholder(shape=(None, obs_dim), dtype=tf.float32)
+    obs_ph = tf.compat.v1.placeholder(shape=(None, obs_dim), dtype=tf.float32)
     logits = mlp(obs_ph, sizes=hidden_sizes+[n_acts])
 
     # make action selection op (outputs int actions, sampled from policy)
-    actions = tf.squeeze(tf.multinomial(logits=logits,num_samples=1), axis=1)
+    actions = tf.squeeze(tf.random.categorical(logits=logits,num_samples=1), axis=1)
 
     # make loss function whose gradient, for the right data, is policy gradient
-    weights_ph = tf.placeholder(shape=(None,), dtype=tf.float32)
-    act_ph = tf.placeholder(shape=(None,), dtype=tf.int32)
+    weights_ph = tf.compat.v1.placeholder(shape=(None,), dtype=tf.float32)
+    act_ph = tf.compat.v1.placeholder(shape=(None,), dtype=tf.int32)
     action_masks = tf.one_hot(act_ph, n_acts)
-    log_probs = tf.reduce_sum(action_masks * tf.nn.log_softmax(logits), axis=1)
-    loss = -tf.reduce_mean(weights_ph * log_probs)
+    log_probs = tf.reduce_sum(input_tensor=action_masks * tf.nn.log_softmax(logits), axis=1)
+    loss = -tf.reduce_mean(input_tensor=weights_ph * log_probs)
 
     # make train op
-    train_op = tf.train.AdamOptimizer(learning_rate=lr).minimize(loss)
+    train_op = tf.compat.v1.train.AdamOptimizer(learning_rate=lr).minimize(loss)
 
-    sess = tf.InteractiveSession()
-    sess.run(tf.global_variables_initializer())
+    sess = tf.compat.v1.InteractiveSession()
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     # for training policy
     def train_one_epoch():
