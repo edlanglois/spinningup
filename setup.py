@@ -25,7 +25,7 @@ setup(
         'pytest',
         'psutil',
         'scipy',
-        'seaborn==0.8.1',
+        'seaborn>=0.9',
         'tensorflow>=2.0',
         'torch==1.3.1',
         'tqdm'
