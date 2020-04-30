@@ -1,5 +1,5 @@
 from os.path import join, dirname, realpath
-from setuptools import setup
+from setuptools import setup, find_packages
 import sys
 
 assert sys.version_info.major == 3 and sys.version_info.minor >= 6, \
@@ -11,7 +11,7 @@ with open(join("spinup", "version.py")) as version_file:
 
 setup(
     name='spinup',
-    py_modules=['spinup'],
+    packages=find_packages(),
     version=__version__,#'0.1',
     install_requires=[
         'cloudpickle>=1.2.1',
